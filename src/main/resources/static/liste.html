@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des résultats</title>
+    <link rel="stylesheet" href="style/style.css">
+</head>
+<body>
+<button onclick="window.location.href='index.html'">Discuter avec le chatbot</button>
+<button onclick="window.location.href='integration.html'">Tests automatiques</button>
+<button onclick="window.location.href='injection_manuelle.html'">Injection de test manuelle</button>
+
+<h2>Liste des résultats</h2>
+<button id="clear-btn">Vider la base</button>
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>LLM</th>
+        <th>Question</th>
+        <th>Prompt</th>
+        <th>Réponse</th>
+        <th>Évaluation</th>
+        <th>Temps (ms)</th>
+        <th>Date d’exécution</th>
+    </tr>
+    </thead>
+    <tbody id="resultats-table">
+    </tbody>
+</table>
+
+<script>
+    fetch("/api/resultats")
+        .then(response => response.json())
+        .then(data => {
+            const table = document.getElementById("resultats-table");
+            data.forEach(res => {
+                const row = document.createElement("tr");
+
+                row.innerHTML = `
+            <td>${res.id}</td>
+            <td>${res.llm}</td>
+            <td><pre>${res.question}</pre></td>
+            <td><pre>${res.prompt}</pre></td>
+            <td><pre>${res.reponse}</pre></td>
+            <td><pre>${res.evaluation || ""}</pre></td>
+            <td>${res.tempsMs}</td>
+            <td>${res.executedAt ? new Date(res.executedAt).toLocaleString() : ""}</td>
+          `;
+
+                table.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error("Erreur lors du chargement :", error);
+            alert("Impossible de charger les résultats.");
+        });
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        if (confirm("Es-tu sûr de vouloir supprimer toutes les données ?")) {
+            fetch('/api/clear', { method: 'DELETE' })
+                .then(res => {
+                    if (!res.ok) throw new Error("Erreur lors du vidage");
+                    //Recharge la page après succès
+                    location.reload();
+                })
+                .catch(err => alert(err.message));
+        }
+    });
+</script>
+</body>
+</html>

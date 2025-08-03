@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Chatbot</title>
+    <link rel="stylesheet" href="style/style.css">
+</head>
+<body>
+
+<button onclick="window.location.href='liste.html'">Voir les résultats</button>
+<button onclick="window.location.href='injection_manuelle.html'">Injection de test manuelle</button>
+<button onclick="window.location.href='index.html'">Discuter avec le chatbot</button>
+<button id="clear-btn">🗑️ Vider les résultats</button>
+
+<br><br>
+
+<label for="model-select">Modèle :</label>
+<select id="model-select"></select>
+
+<label for="prompt-select">Type de prompt :</label>
+<select id="prompt-select"></select>
+
+<button id="send-btn">Lancer l’injection</button>
+
+<div id="loader" class="loader-container" style="display: none;">
+    <svg class="loader" viewBox="0 0 50 50">
+        <circle class="path" cx="25" cy="25" r="20" fill="none" stroke-width="5"/>
+    </svg>
+    <p>Injection en cours… Cela peut prendre du temps.</p>
+</div>
+
+<script>
+    let currentPromptText = '';
+
+    async function loadModels() {
+        try {
+            const response = await fetch('/donnees/models.json');
+            const models = await response.json();
+            const select = document.getElementById('model-select');
+            models.forEach(m => {
+                const option = document.createElement('option');
+                option.value = m.code;
+                option.textContent = m.nom;
+                select.appendChild(option);
+            });
+        } catch (err) {
+            console.error('Erreur chargement des modèles', err);
+        }
+    }
+
+    async function loadPrompts() {
+        try {
+            const response = await fetch('/donnees/prompt.json');
+            const prompts = await response.json();
+            const select = document.getElementById('prompt-select');
+            prompts.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.code;
+                option.textContent = p.nom;
+                option.dataset.promptTexte = p.texte;
+                select.appendChild(option);
+            });
+
+            if (prompts.length > 0) {
+                select.selectedIndex = 0;
+                currentPromptText = prompts[0].texte;
+            }
+
+            select.addEventListener('change', () => {
+                const selectedOption = select.options[select.selectedIndex];
+                currentPromptText = selectedOption.dataset.promptTexte;
+            });
+        } catch (err) {
+            console.error('Erreur chargement des prompts', err);
+        }
+    }
+
+    document.getElementById('send-btn').addEventListener('click', () => {
+        const llm = document.getElementById('model-select').value;
+        const promptKey = document.getElementById('prompt-select').value;
+        const loader = document.getElementById('loader');
+        loader.style.display = 'flex';
+
+        fetch('/api/inject', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ llm, promptKey })
+        })
+            .then(res => {
+                loader.style.display = 'none';
+                if (!res.ok) throw new Error("Erreur d'injection");
+                alert("Injection réussie !");
+            })
+            .catch(err => {
+                loader.style.display = 'none';
+                alert(err.message);
+            });
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        if (confirm("Es-tu sûr de vouloir tout supprimer et réinitialiser les IDs ?")) {
+            fetch('/api/clear', { method: 'DELETE' })
+                .then(async res => {
+                    const msg = await res.text();
+                    if (!res.ok) throw new Error(`Erreur HTTP ${res.status} : ${msg}`);
+                    alert(msg);
+                    window.location.reload();
+                })
+                .catch(err => {
+                    console.error("Erreur JS :", err);
+                    alert("Une erreur est survenue : " + err.message);
+                });
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadModels();
+        loadPrompts();
+    });
+</script>
+
+</body>
+</html>

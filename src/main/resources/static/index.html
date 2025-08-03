@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>ChatBot AI</title>
+    <link rel="stylesheet" href="/style/style.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto&display=swap">
+</head>
+<body>
+
+<!-- ✅ Navigation -->
+<button onclick="window.location.href='injection_manuelle.html'">Injection de test manuelle</button>
+<button onclick="window.location.href='liste.html'">Voir les résultats</button>
+<button onclick="window.location.href='integration.html'">Tests automatiques</button>
+
+<br><br>
+
+<!-- ✅ Sélection du prompt -->
+<label for="prompt-select">Type de prompt :</label>
+<select id="prompt-select"></select>
+
+<div class="chat-wrapper">
+    <div id="chat-box" class="chat-box"></div>
+
+    <form id="chatForm" class="chat-input-container">
+        <input type="text" id="question" placeholder="Pose ta question..." required autocomplete="off">
+        <button type="submit">Envoyer</button>
+    </form>
+
+    <button id="clearHistory" class="clear-button">🗑️ Effacer l'historique</button>
+    <p class="warning">⚠️ Chaque question est indépendante. Aucune mémoire n'est conservée entre les messages.</p>
+</div>
+
+<script>
+    let currentPromptText = '';
+
+    // ✅ Charger les prompts
+    async function loadPrompts() {
+        try {
+            const response = await fetch('/donnees/prompt.json');
+            const prompts = await response.json();
+            const select = document.getElementById('prompt-select');
+
+            prompts.forEach(p => {
+                const option = document.createElement('option');
+                option.value = p.code;
+                option.textContent = p.nom;
+                option.dataset.promptTexte = p.texte;
+                select.appendChild(option);
+            });
+
+            if (prompts.length > 0) {
+                select.selectedIndex = 0;
+                currentPromptText = prompts[0].texte;
+            }
+
+            select.addEventListener('change', () => {
+                const selectedOption = select.options[select.selectedIndex];
+                currentPromptText = selectedOption.dataset.promptTexte;
+            });
+
+        } catch (err) {
+            console.error('Erreur chargement des prompts', err);
+        }
+    }
+
+    loadPrompts();
+
+    const chatForm = document.getElementById("chatForm");
+    const chatBox = document.getElementById("chat-box");
+    const clearBtn = document.getElementById("clearHistory");
+
+    chatForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        const input = document.getElementById("question");
+        const question = input.value.trim();
+        if (!question) return;
+
+        const exchange = document.createElement("div");
+        exchange.className = "exchange";
+        exchange.innerHTML = `
+        <div class="message user"><strong>Vous :</strong><br>${question}</div>
+        <div class="message loading">Chargement...</div>
+      `;
+        chatBox.appendChild(exchange);
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        input.value = "";
+
+        try {
+            const response = await fetch("/ask", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({ question, prompt: currentPromptText })
+            });
+            const answer = await response.text();
+            const loadingMsg = exchange.querySelector(".loading");
+            loadingMsg.classList.remove("loading");
+            loadingMsg.classList.add("bot");
+            loadingMsg.innerHTML = `<strong>Chatbot :</strong><br>${answer}`;
+        } catch (err) {
+            const loadingMsg = exchange.querySelector(".loading");
+            loadingMsg.classList.remove("loading");
+            loadingMsg.classList.add("error");
+            loadingMsg.innerHTML = `Erreur : ${err.message}`;
+        }
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    clearBtn.addEventListener("click", () => {
+        chatBox.innerHTML = "";
+    });
+</script>
+
+</body>
+</html>
