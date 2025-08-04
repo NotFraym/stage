@@ -9,7 +9,6 @@
 
 <button onclick="window.location.href='liste.html'">Voir les résultats</button>
 <button onclick="window.location.href='index.html'">Discuter avec le chatbot</button>
-<button id="clear-btn">🗑️ Vider les résultats</button>
 
 <br><br>
 
@@ -94,22 +93,6 @@
                 loader.style.display = 'none';
                 alert(err.message);
             });
-    });
-
-    document.getElementById('clear-btn').addEventListener('click', () => {
-        if (confirm("Es-tu sûr de vouloir tout supprimer et réinitialiser les IDs ?")) {
-            fetch('/api/clear', { method: 'DELETE' })
-                .then(async res => {
-                    const msg = await res.text();
-                    if (!res.ok) throw new Error(`Erreur HTTP ${res.status} : ${msg}`);
-                    alert(msg);
-                    window.location.reload();
-                })
-                .catch(err => {
-                    console.error("Erreur JS :", err);
-                    alert("Une erreur est survenue : " + err.message);
-                });
-        }
     });
 
     document.addEventListener('DOMContentLoaded', () => {
